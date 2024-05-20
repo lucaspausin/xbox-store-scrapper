@@ -13,7 +13,7 @@ class XboxPriceScraper {
 
   async init() {
     try {
-      this.browser = await puppeteer.launch({ headless: true })
+      this.browser = await puppeteer.launch()
       this.page = await this.browser.newPage()
       const htmlContent = await fs.readFile(
         this.htmlFilePath,
@@ -189,7 +189,7 @@ const scrapeXboxPage = async (page, url, platform) => {
 }
 
 const run = async () => {
-  const browser = await puppeteer.launch({ headless: true })
+  const browser = await puppeteer.launch()
   const page = await browser.newPage()
 
   const urls = [
@@ -221,7 +221,21 @@ const run = async () => {
       platform,
     }))
 
-    allResults = allResults.concat(results)
+    const uniqueGames = new Set()
+
+    results.forEach((result) => {
+      const gameKey = `${result.title}-${result.price}-${result.url}-${result.imgUrl}`
+
+      const gameExists = allResults.some((existingGame) => {
+        const existingGameKey = `${existingGame.title}-${existingGame.price}-${existingGame.url}-${existingGame.imgUrl}`
+        return existingGameKey === gameKey
+      })
+
+      if (!uniqueGames.has(gameKey) && !gameExists) {
+        allResults.push(result)
+        uniqueGames.add(gameKey)
+      }
+    })
   }
 
   const jsonData = JSON.stringify(allResults, null, 2)
