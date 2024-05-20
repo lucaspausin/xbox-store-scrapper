@@ -1,0 +1,17 @@
+{
+  "name": "xbox-games",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "google-spreadsheet": "^3.3.0",
+    "moment": "^2.30.1",
+    "objects-to-csv": "^1.3.6",
+    "puppeteer": "^19.2.2",
+    "uuid": "^9.0.1"
+  },
+  "prettier": {
+    "printWidth": 65,
+    "semi": false
+  }
+}
