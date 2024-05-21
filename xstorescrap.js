@@ -102,8 +102,14 @@ class XboxPriceScraper {
             const titleElement = e.querySelector(
               ".ProductCard-module__title___nHGIp"
             )
+            const alternativeTitleElement = e.querySelector(
+              ".ProductCard-module__singleLineTitle___32jUF"
+            )
+
             const title = titleElement
               ? titleElement.innerText.toUpperCase()
+              : alternativeTitleElement
+              ? alternativeTitleElement.innerText.toUpperCase()
               : ""
 
             const gameInfo = {
@@ -189,7 +195,7 @@ const scrapeXboxPage = async (page, url, platform) => {
 }
 
 const run = async () => {
-  const browser = await puppeteer.launch()
+  const browser = await puppeteer.launch({ headless: true })
   const page = await browser.newPage()
 
   const urls = [
