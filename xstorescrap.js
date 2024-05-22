@@ -28,13 +28,11 @@ class XboxPriceScraper {
         "Digging into the HTML and retrieving all the games."
       )
     } catch (error) {
-      console.log(
+      console.error(
         "Sorry. There was a problem with loading the page. Please check your internet connection and try again.",
         error
       )
-      if (this.browser) {
-        await this.browser.close()
-      }
+      await this.cleanup()
     }
   }
 
@@ -139,7 +137,7 @@ class XboxPriceScraper {
         )
       })
     } catch (error) {
-      console.log("Error during page evaluation:", error)
+      console.error("Error during page evaluation:", error)
       return []
     }
   }
@@ -150,11 +148,17 @@ class XboxPriceScraper {
       results = await this.scrapePage()
       this.list = this.list.concat(results)
     } catch (error) {
-      console.log("Error during scraping:", error)
+      console.error("Error during scraping:", error)
     } finally {
-      await this.browser.close()
+      await this.cleanup()
     }
     return this.list
+  }
+
+  async cleanup() {
+    if (this.browser) {
+      await this.browser.close()
+    }
   }
 }
 
@@ -250,11 +254,9 @@ const run = async () => {
   const jsonFileName = `${folderName}/${randomId}_xbox_games.json`
 
   try {
-    await fs.mkdir(folderName)
+    await fs.mkdir(folderName, { recursive: true })
   } catch (error) {
-    if (error.code !== "EEXIST") {
-      console.error("Error creating folder:", error)
-    }
+    console.error("Error creating folder:", error)
   }
 
   try {
@@ -269,6 +271,7 @@ const run = async () => {
   console.log(
     "Thank you for using our script to retrieve game data!"
   )
+
   try {
     const files = await fs.readdir(__dirname)
     for (const file of files) {
@@ -279,6 +282,7 @@ const run = async () => {
   } catch (error) {
     console.error("Error deleting HTML files:", error)
   }
+
   await browser.close()
 }
 
