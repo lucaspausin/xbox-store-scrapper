@@ -3,35 +3,56 @@ const fs = require("fs").promises
 const { v4: uuidv4 } = require("uuid")
 
 class XboxPriceScraper {
-  constructor(htmlFilePath, platform) {
-    this.htmlFilePath = htmlFilePath
+  constructor(platform) {
     this.platform = platform
     this.visibleSelector =
       ".ProductCard-module__cardWrapper___6Ls86"
     this.list = []
   }
 
-  async init() {
+  async init(url) {
     try {
-      this.browser = await puppeteer.launch()
+      this.browser = await puppeteer.launch({ headless: false })
       this.page = await this.browser.newPage()
-      const htmlContent = await fs.readFile(
-        this.htmlFilePath,
-        "utf-8"
-      )
-      await this.page.setContent(htmlContent)
+      await this.page.goto(url, {
+        waitUntil: "networkidle2",
+        timeout: 60000, 
+      })
+
+      let loadMoreButton
+      let hasClickedMore = false
+      while (
+        (loadMoreButton = await this.page.$(
+          "button.commonStyles-module__basicButton___go-bX"
+        ))
+      ) {
+        if (!hasClickedMore) {
+          console.log(
+            "Now just wait for 5 to 10 minutes, please. This process may take a little while as necessary tasks are being completed. Thank you for your patience and understanding!"
+          )
+          hasClickedMore = true
+        }
+        await loadMoreButton.click()
+      
+
+      
+        await this.page.waitForFunction(
+          () =>
+            !document.querySelector(
+              "button.commonStyles-module__basicButton___go-bX"
+            )
+        )
+      
+        await this.page.waitForTimeout(3000)
+      }
+
       await this.page.waitForSelector(this.visibleSelector, {
         visible: true,
-        timeout: 300000,
+        timeout: 60000, 
       })
-      console.log(
-        "Digging into the HTML and retrieving all the games."
-      )
+      console.log("Scraping data from", url)
     } catch (error) {
-      console.error(
-        "Sorry. There was a problem with loading the page. Please check your internet connection and try again.",
-        error
-      )
+      console.error("Error initializing page:", error)
       await this.cleanup()
     }
   }
@@ -142,19 +163,6 @@ class XboxPriceScraper {
     }
   }
 
-  async scrape() {
-    let results = []
-    try {
-      results = await this.scrapePage()
-      this.list = this.list.concat(results)
-    } catch (error) {
-      console.error("Error during scraping:", error)
-    } finally {
-      await this.cleanup()
-    }
-    return this.list
-  }
-
   async cleanup() {
     if (this.browser) {
       await this.browser.close()
@@ -162,45 +170,8 @@ class XboxPriceScraper {
   }
 }
 
-const scrapeXboxPage = async (page, url, platform) => {
-  try {
-    await page.goto(url, {
-      waitUntil: "networkidle2",
-      timeout: 300000,
-    })
-
-    let loadMoreButton
-    let hasClickedMore = false
-    while (
-      (loadMoreButton = await page.$(
-        "button.commonStyles-module__basicButton___go-bX"
-      ))
-    ) {
-      if (!hasClickedMore) {
-        console.log(
-          "Now just wait for 5 to 10 minutes, please. This process may take a little while as necessary tasks are being completed. Thank you for your patience and understanding!"
-        )
-        hasClickedMore = true
-      }
-      await loadMoreButton.click()
-      await page.waitForTimeout(3000)
-    }
-
-    const randomId = uuidv4().slice(0, 8)
-    const fileName = `${randomId}_${platform}-xbox_page.html`
-
-    const html = await page.content()
-    await fs.writeFile(fileName, html)
-    console.log(`HTML temporarily saved as ${fileName}.`)
-    return fileName
-  } catch (error) {
-    console.error("Error:", error)
-  }
-}
-
 const run = async () => {
-  const browser = await puppeteer.launch({ headless: true })
-  const page = await browser.newPage()
+  const browser = await puppeteer.launch()
 
   const urls = [
     {
@@ -216,15 +187,9 @@ const run = async () => {
   let allResults = []
 
   for (const { url, platform } of urls) {
-    const htmlFilePath = await scrapeXboxPage(
-      page,
-      url,
-      platform
-    )
-
-    const scraper = new XboxPriceScraper(htmlFilePath, platform)
-    await scraper.init()
-    let results = await scraper.scrape()
+    const scraper = new XboxPriceScraper(platform)
+    await scraper.init(url)
+    let results = await scraper.scrapePage()
 
     results = results.map((result) => ({
       ...result,
@@ -246,6 +211,7 @@ const run = async () => {
         uniqueGames.add(gameKey)
       }
     })
+    await scraper.cleanup()
   }
 
   const jsonData = JSON.stringify(allResults, null, 2)
@@ -271,18 +237,6 @@ const run = async () => {
   console.log(
     "Thank you for using our script to retrieve game data!"
   )
-
-  try {
-    const files = await fs.readdir(__dirname)
-    for (const file of files) {
-      if (file.endsWith(".html")) {
-        await fs.unlink(file)
-      }
-    }
-  } catch (error) {
-    console.error("Error deleting HTML files:", error)
-  }
-
   await browser.close()
 }
 
