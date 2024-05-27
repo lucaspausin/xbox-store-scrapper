@@ -12,11 +12,11 @@ class XboxPriceScraper {
 
   async init(url) {
     try {
-      this.browser = await puppeteer.launch({ headless: false })
+      this.browser = await puppeteer.launch({ headless: "new" })
       this.page = await this.browser.newPage()
       await this.page.goto(url, {
         waitUntil: "networkidle2",
-        timeout: 60000, 
+        timeout: 60000,
       })
 
       let loadMoreButton
@@ -33,22 +33,20 @@ class XboxPriceScraper {
           hasClickedMore = true
         }
         await loadMoreButton.click()
-      
 
-      
         await this.page.waitForFunction(
           () =>
             !document.querySelector(
               "button.commonStyles-module__basicButton___go-bX"
             )
         )
-      
+
         await this.page.waitForTimeout(3000)
       }
 
       await this.page.waitForSelector(this.visibleSelector, {
         visible: true,
-        timeout: 60000, 
+        timeout: 60000,
       })
       console.log("Scraping data from", url)
     } catch (error) {
